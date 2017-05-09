@@ -13,10 +13,12 @@ import os
 import sys
 import threading
 
+from sgtkLib import tkutil
+
 # by importing QT from sgtk rather than directly, we ensure that
 # the code will be compatible with both PySide and PyQt.
 from sgtk.platform.qt import QtCore, QtGui
-from .ui.dialog import Ui_Dialog
+from .ui.browserui import Ui_Dialog
 
 def show_dialog(app_instance):
     """
@@ -28,36 +30,69 @@ def show_dialog(app_instance):
     
     # we pass the dialog class to this method and leave the actual construction
     # to be carried out by toolkit.
-    app_instance.engine.show_dialog("Starter Template App...", app_instance, AppDialog)
-    
+    app_instance.engine.show_dialog("Soumitra's Browser", app_instance, AppWindow)
+
+# class AppDialog(QtGui.QWidget):
+#     """
+#     Main application dialog window
+#     """
+#
+#     def __init__(self):
+#         """
+#         Constructor
+#         """
+#         # first, call the base class and let it do its thing.
+#         QtGui.QWidget.__init__(self)
+#
+#         # now load in the UI that was created in the UI designer
+#         self.ui = Ui_Dialog()
+#         self.ui.setupUi(self)
+#
+#         # most of the useful accessors are available through the Application class instance
+#         # it is often handy to keep a reference to this. You can get it via the following method:
+#         self._app = sgtk.platform.current_bundle()
+#
+#         # via the self._app handle we can for example access:
+#         # - The engine, via self._app.engine
+#         # - A Shotgun API instance, via self._app.shotgun
+#         # - A tk API instance, via self._app.tk
+#
+#         # lastly, set up our very basic UI
+#         self.ui.context.setText("Current Context: %s" % self._app.context)
 
 
-class AppDialog(QtGui.QWidget):
-    """
-    Main application dialog window
-    """
-    
+class AppWindow(QtGui.QWidget, Ui_Dialog):
+
     def __init__(self):
-        """
-        Constructor
-        """
-        # first, call the base class and let it do its thing.
-        QtGui.QWidget.__init__(self)
-        
-        # now load in the UI that was created in the UI designer
-        self.ui = Ui_Dialog() 
-        self.ui.setupUi(self)
-        
-        # most of the useful accessors are available through the Application class instance
-        # it is often handy to keep a reference to this. You can get it via the following method:
-        self._app = sgtk.platform.current_bundle()
-        
-        # via the self._app handle we can for example access:
-        # - The engine, via self._app.engine
-        # - A Shotgun API instance, via self._app.shotgun
-        # - A tk API instance, via self._app.tk 
-        
-        # lastly, set up our very basic UI
-        self.ui.context.setText("Current Context: %s" % self._app.context)
-        
-        
+        super(AppWindow, self).__init__()
+        self.asset_names = ['ONE','TWO','THREE']
+        self.asset_model = QtGui.QStringListModel(self.asset_names)
+        self.setupUi(self)
+        self.hide_tk_title_bar = True
+        self.get_shotgun_data()
+        self.listView.setModel(self.shots_model)
+        self.listView_2.setModel(self.asset_model)
+        QtCore.QObject.connect(self.listView.selectionModel(), QtCore.SIGNAL('currentChanged(QModelIndex, QModelIndex)'), self.do_something)
+
+    def get_shotgun_data(self):
+        tank, sgw, project = tkutil.getTk(str(os.environ['PROD']), fast=True)
+        self.shots = sgw.Shots(project=project)
+        self.shot_names = [x.code for x in self.shots]
+        self.shots_model = QtGui.QStringListModel(self.shot_names)
+
+    def do_something(self, current, previous):
+        tank, sgw, project = tkutil.getTk(str(os.environ['PROD']), fast=True)
+        shot_name = str(self.shot_names[current.row()])
+        shot = sgw.Shot(shot_name, project=project)
+        self.assets = shot.assets
+        self.new_list = [x.code for x in self.assets]
+
+
+
+
+
+
+
+
+
+
