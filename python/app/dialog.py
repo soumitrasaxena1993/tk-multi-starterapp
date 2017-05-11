@@ -20,6 +20,8 @@ from sgtkLib import tkutil
 from sgtk.platform.qt import QtCore, QtGui
 from .ui.browserui import Ui_Dialog
 
+tank, sgw, project = tkutil.getTk(str(os.environ['PROD']), fast=True)
+
 def show_dialog(app_instance):
     """
     Shows the main dialog window.
@@ -32,60 +34,161 @@ def show_dialog(app_instance):
     # to be carried out by toolkit.
     app_instance.engine.show_dialog("Soumitra's Browser", app_instance, AppWindow)
 
-# class AppDialog(QtGui.QWidget):
-#     """
-#     Main application dialog window
-#     """
-#
-#     def __init__(self):
-#         """
-#         Constructor
-#         """
-#         # first, call the base class and let it do its thing.
-#         QtGui.QWidget.__init__(self)
-#
-#         # now load in the UI that was created in the UI designer
-#         self.ui = Ui_Dialog()
-#         self.ui.setupUi(self)
-#
-#         # most of the useful accessors are available through the Application class instance
-#         # it is often handy to keep a reference to this. You can get it via the following method:
-#         self._app = sgtk.platform.current_bundle()
-#
-#         # via the self._app handle we can for example access:
-#         # - The engine, via self._app.engine
-#         # - A Shotgun API instance, via self._app.shotgun
-#         # - A tk API instance, via self._app.tk
-#
-#         # lastly, set up our very basic UI
-#         self.ui.context.setText("Current Context: %s" % self._app.context)
+class getShotsThread(QtCore.QThread):
+
+    def __init__(self):
+        super(getShotsThread, self).__init__()
+
+    def __del__(self):
+        self.wait()
+
+    def run(self):
+        print "Inside Shot Thread"
+        shots = sgw.Shots(project=project)
+        shot_names = [x.code for x in shots]
+        self.emit(QtCore.SIGNAL('get_shots(QStringList)'), shot_names)
+
+class getAssetsThread(QtCore.QThread):
+
+    def __init__(self, shot):
+        super(getAssetsThread, self).__init__()
+        self.shot = shot
+
+    def __del__(self):
+        self.wait()
+
+    def run(self):
+        print "Inside Asset thread"
+        shot = sgw.Shot(self.shot, project=project)
+        asset_list = [x.code for x in shot.assets]
+        self.emit(QtCore.SIGNAL('get_assets(QStringList)'), asset_list)
+        print "After Signal emit"
+
+class AssetListModel(QtGui.QStringListModel):
+
+    def __init__(self, values, parent=None):
+        super(AssetListModel, self).__init__()
+        self.values = values
+
+    def rowCount(self, parent):
+        return len(self.values)
+
+    def data(self, index, role):
+        #print "Inside Data"
+
+        if role == QtCore.Qt.DisplayRole:
+            row = index.row()
+            value = self.values[row]
+            return value
+
+    def setData(self, index, value, role = QtCore.Qt.EditRole):
+        print "Setting data"
+
+        if role == QtCore.Qt.EditRole:
+
+            row = index.row()
+            self.values[row] = value
+            self.dataChanged.emit(index, index)
+            return True
+
+class ShotListModel(QtGui.QStringListModel):
+
+    def __init__(self, values, parent=None):
+        super(ShotListModel, self).__init__()
+        self.values = values
+
+    def rowCount(self, parent):
+        return len(self.values)
+
+    def data(self, index, role):
+        #print "Inside Data"
+
+        if role == QtCore.Qt.DisplayRole:
+            row = index.row()
+            value = self.values[row]
+            return value
+
+    def setData(self, index, value, role = QtCore.Qt.EditRole):
+        print "Setting data"
+
+        if role == QtCore.Qt.EditRole:
+
+            row = index.row()
+            self.values[row] = value
+            self.dataChanged.emit(index, index)
+            return True
 
 
 class AppWindow(QtGui.QWidget, Ui_Dialog):
 
     def __init__(self):
         super(AppWindow, self).__init__()
-        self.asset_names = ['ONE','TWO','THREE']
-        self.asset_model = QtGui.QStringListModel(self.asset_names)
         self.setupUi(self)
         self.hide_tk_title_bar = True
-        self.get_shotgun_data()
-        self.listView.setModel(self.shots_model)
+
+        self.asset_list = []
+        self.shot_list = []
+
+        self.shot_model = ShotListModel(self.shot_list)
+        self.listView.setModel(self.shot_model)
+
+        self.asset_model = AssetListModel(self.asset_list)
         self.listView_2.setModel(self.asset_model)
-        QtCore.QObject.connect(self.listView.selectionModel(), QtCore.SIGNAL('currentChanged(QModelIndex, QModelIndex)'), self.do_something)
 
-    def get_shotgun_data(self):
-        tank, sgw, project = tkutil.getTk(str(os.environ['PROD']), fast=True)
-        self.shots = sgw.Shots(project=project)
-        self.shot_names = [x.code for x in self.shots]
-        self.shots_model = QtGui.QStringListModel(self.shot_names)
+        self.get_shots_thread = getShotsThread()
+        self.connect(self.get_shots_thread, QtCore.SIGNAL("get_shots(QStringList)"), self.get_shots)
+        self.connect(self.get_shots_thread, QtCore.SIGNAL("finished()"), self.done)
+        self.get_shots_thread.start()
+        QtCore.QObject.connect(self.listView.selectionModel(), QtCore.SIGNAL('currentChanged(QModelIndex, QModelIndex)'), self.get_asset_list)
+        QtCore.QObject.connect(self.listView_2.selectionModel(), QtCore.SIGNAL('currentChanged(QModelIndex, QModelIndex)'), self.get_asset_info)
 
-    def do_something(self, current, previous):
-        tank, sgw, project = tkutil.getTk(str(os.environ['PROD']), fast=True)
-        shot_name = str(self.shot_names[current.row()])
-        shot = sgw.Shot(shot_name, project=project)
-        self.assets = shot.assets
-        self.new_list = [x.code for x in self.assets]
+    def get_shots(self, shot_list):
+        print "Inside get shots"
+        self.progressBar.setMaximum(len(shot_list))
+        self.progressBar.setValue(0)
+        self.shot_model.layoutAboutToBeChanged.emit()
+        self.shot_list[:] = []
+        for shot in shot_list:
+            self.shot_list.append(shot)
+        self.shot_model.layoutChanged.emit()
+
+    def get_asset_list(self, current, previous):
+        print "Inside get asset list"
+        self.progressBar.setValue(0)
+        shot_name = str(self.shot_list[current.row()])
+        get_assets_thread = getAssetsThread(shot_name)
+        self.connect(get_assets_thread, QtCore.SIGNAL("get_assets(QStringList)"), self.get_assets)
+        self.connect(get_assets_thread, QtCore.SIGNAL("finished()"), self.done_assets)
+        get_assets_thread.start()
+        print "After thread start"
+
+    def get_asset_info(self, current, previous):
+        print "Inside get asset info"
+        asset_name = str(self.asset_list[current.row()])
+        asset = sgw.Asset(asset_name, project=project)
+        self.asset_name.setText(asset_name)
+        self.asset_type.setText(asset.sg_asset_type)
+        self.created_by.setText(asset.created_by.firstname + ' ' + asset.created_by.lastname)
+
+    def get_assets(self, asset_list):
+        print "Inside get assets"
+        self.progressBar.setMaximum(len(asset_list))
+        self.asset_model.layoutAboutToBeChanged.emit()
+        self.asset_list[:] = []
+        for asset in asset_list:
+            self.progressBar.setValue(self.progressBar.value()+1)
+            self.asset_list.append(asset)
+        self.asset_model.layoutChanged.emit()
+
+    def done(self):
+        print "Inside done"
+        QtGui.QMessageBox.information(self, "Done", "Done fetching shots")
+        self.progressBar.setValue(0)
+
+    def done_assets(self):
+        print "Inside done"
+        self.progressBar.setValue(0)
+
 
 
 

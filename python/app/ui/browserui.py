@@ -2,12 +2,12 @@
 
 # Form implementation generated from reading ui file '/datas/saxenas/packages/mikrosVfx/vfxTkCore/dev/studio/install/app_store/tk-multi-starterapp/python/app/ui/browserui.ui'
 #
-# Created: Tue May  9 15:33:48 2017
+# Created: Thu May 11 15:30:10 2017
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
 
-from tank.platform.qt import QtCore, QtGui
+from sgtk.platform.qt import QtCore, QtGui
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -25,8 +25,8 @@ except AttributeError:
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
-        Dialog.setObjectName(_fromUtf8("Soumitra's Browser"))
-        Dialog.resize(552, 423)
+        Dialog.setObjectName(_fromUtf8("Dialog"))
+        Dialog.resize(552, 502)
         self.listView = QtGui.QListView(Dialog)
         self.listView.setGeometry(QtCore.QRect(10, 50, 256, 311))
         self.listView.setObjectName(_fromUtf8("listView"))
@@ -39,9 +39,28 @@ class Ui_Dialog(object):
         self.listView_2 = QtGui.QListView(Dialog)
         self.listView_2.setGeometry(QtCore.QRect(280, 50, 256, 311))
         self.listView_2.setObjectName(_fromUtf8("listView_2"))
-        self.pushButton = QtGui.QPushButton(Dialog)
-        self.pushButton.setGeometry(QtCore.QRect(380, 370, 81, 22))
-        self.pushButton.setObjectName(_fromUtf8("pushButton"))
+        self.progressBar = QtGui.QProgressBar(Dialog)
+        self.progressBar.setGeometry(QtCore.QRect(10, 470, 531, 23))
+        self.progressBar.setProperty("value", 24)
+        self.progressBar.setObjectName(_fromUtf8("progressBar"))
+        self.label_3 = QtGui.QLabel(Dialog)
+        self.label_3.setGeometry(QtCore.QRect(20, 370, 81, 21))
+        self.label_3.setObjectName(_fromUtf8("label_3"))
+        self.label_4 = QtGui.QLabel(Dialog)
+        self.label_4.setGeometry(QtCore.QRect(20, 400, 131, 21))
+        self.label_4.setObjectName(_fromUtf8("label_4"))
+        self.label_5 = QtGui.QLabel(Dialog)
+        self.label_5.setGeometry(QtCore.QRect(20, 430, 121, 21))
+        self.label_5.setObjectName(_fromUtf8("label_5"))
+        self.asset_name = QtGui.QLineEdit(Dialog)
+        self.asset_name.setGeometry(QtCore.QRect(180, 370, 351, 22))
+        self.asset_name.setObjectName(_fromUtf8("asset_name"))
+        self.asset_type = QtGui.QLineEdit(Dialog)
+        self.asset_type.setGeometry(QtCore.QRect(180, 400, 351, 22))
+        self.asset_type.setObjectName(_fromUtf8("asset_type"))
+        self.created_by = QtGui.QLineEdit(Dialog)
+        self.created_by.setGeometry(QtCore.QRect(180, 430, 351, 22))
+        self.created_by.setObjectName(_fromUtf8("created_by"))
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -50,5 +69,7 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
         self.label.setText(_translate("Dialog", "Shots", None))
         self.label_2.setText(_translate("Dialog", "Assets", None))
-        self.pushButton.setText(_translate("Dialog", "Refresh", None))
+        self.label_3.setText(_translate("Dialog", "Asset name", None))
+        self.label_4.setText(_translate("Dialog", "Asset Type", None))
+        self.label_5.setText(_translate("Dialog", "Created By", None))
 
